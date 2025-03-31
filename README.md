@@ -1,0 +1,1 @@
+# ash-local-pre-commit-config
