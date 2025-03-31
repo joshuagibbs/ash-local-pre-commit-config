@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Pre-commit hook for AWS Automated Security Helper (ASH)
+# Place this file in .git/hooks/pre-commit and make it executable (chmod +x .git/hooks/pre-commit)
+
+echo "Running AWS Automated Security Helper (ASH) pre-commit checks..."
+
+REPO_DIR="${HOME}"/Documents/Git
+ASH_REPO_NAME=automated-security-helper
+echo "${PWD}"
+export PATH="${PATH}:${REPO_DIR}/${ASH_REPO_NAME}"
+
+VERSION=$(ash --version)
+echo "ASH version: ${VERSION}"
+
+# Run ASH on source folder in repo
+ash --source-dir "${PWD}" --output-dir "${PWD}"/.git/logs
+
+# Check ASH exit code
+ASH_EXIT_CODE=$?
+
+if [ $ASH_EXIT_CODE -ne 0 ]; then
+    # Write ASH output to console
+    cat "${PWD}"/.git/logs/aggregated_results.txt
+    echo "❌ ASH found security issues. Please fix them before committing."
+    exit 1
+else
+    # Write ASH output to console
+    cat "${PWD}"/.git/logs/aggregated_results.txt    
+    echo "✅ ASH security check passed!"
+fi
+
+exit 0
