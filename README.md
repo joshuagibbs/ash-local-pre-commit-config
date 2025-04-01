@@ -59,14 +59,19 @@ Execute ash-config.sh against your repo
 
 ## 🎈 Usage <a name="usage"></a>
 
-Add notes about how to use the system.
+The script copies the 'pre-commit' file to the .git/hooks folder in your repo which create a git pre-commit hook. When you commit code changes, before they are accepted the code in the repo will be scanned by [ASH](https://github.com/awslabs/automated-security-helper) and will need to pass all of the ASH security checks before the commit is accepted.
+
+<p align="center">
+  <a href="" rel="noopener">
+ <img width=854px height=661px src="/images/ash-success.png" alt="ASH success example"></a>
+</p>
+
+If one more of the ASH security checks fail the log (aggregated_results.txt) will be displayed in the console so you can see which ASH security checks are failing and perform the necessary remediation before attempting your commit again.
 
 ## ✍️ Authors <a name = "authors"></a>
 
-- [@kylelobo](https://github.com/kylelobo) - Idea & Initial work
+- [@joshuagibbs](https://github.com/joshuagibbs) - Idea & Initial work
 
 ## 🎉 Acknowledgements <a name = "acknowledgement"></a>
 
-- Hat tip to anyone whose code was used
-- Inspiration
-- References
+- [@awslabs](https://github.com/awslabs) - AWS Labs and those that contributed to the creation of [ASH](https://github.com/awslabs/automated-security-helper)
