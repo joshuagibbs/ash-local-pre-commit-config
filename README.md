@@ -29,9 +29,9 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-This project is designed to run on MACOS and assumes the following pre-requisites are in place.
+This project is designed to run on MacOS and assumes the following pre-requisites are in place.
 
-- You have a folder name 'Git' in your Documents folder where you are cloning your repos to.
+- You have a folder name 'Git' in your 'Documents' folder where you are cloning your repos to.
 - You have cloned the repo for the [AWS Automated Security Helper (ASH)](https://github.com/awslabs/automated-security-helper) tool into the 'Git' folder.
 - You have [Docker Desktop](https://www.docker.com/products/docker-desktop/) running locally.
 - The repo where you want to implement the git pre-commit hook is also cloned into your 'Git' folder.
