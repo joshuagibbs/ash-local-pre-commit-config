@@ -33,7 +33,7 @@ This project is designed to run on MacOS and assumes the following pre-requisite
 
 - You have a folder name 'Git' in your 'Documents' folder where you are cloning your repos to.
 - You have cloned the repo for the [AWS Automated Security Helper (ASH)](https://github.com/awslabs/automated-security-helper) tool into the 'Git' folder.
-- You have [Docker Desktop](https://www.docker.com/products/docker-desktop/) running locally.
+- You have [Docker Desktop](https://www.docker.com/products/docker-desktop/) or other Docker like environment running locally.
 - The repo where you want to implement the git pre-commit hook is also cloned into your 'Git' folder.
 
 ### Installing
@@ -57,9 +57,16 @@ Execute ash-config.sh against your repo
 ./ash-local-pre-commit-config/ash-config.sh "${HOME}"/Documents/Git/<REPO_NAME>
 ```
 
+This copies the file 'pre-commit' file into the .git/hooks directory in your repo which create a git pre-commit hook.
+
+<p align="center">
+  <a href="" rel="noopener">
+ <img width=802px height=551px src="/images/pre-commit.png" alt="pre-commit illustration"></a>
+</p>
+
 ## 🎈 Usage <a name="usage"></a>
 
-The script copies the 'pre-commit' file to the .git/hooks folder in your repo which create a git pre-commit hook. When you commit code changes, before they are accepted the code in the repo will be scanned by [ASH](https://github.com/awslabs/automated-security-helper) and will need to pass all of the ASH security checks before the commit is accepted.
+When you commit code changes, before they are accepted the code in the repo will be scanned by [ASH](https://github.com/awslabs/automated-security-helper) and will need to pass all of the ASH security checks before the commit is accepted.
 
 <p align="center">
   <a href="" rel="noopener">
