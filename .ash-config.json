@@ -1,0 +1,32 @@
+{
+  "scanners": {
+    "secrets": true,
+    "sast": true,
+    "sbom": true,
+    "iac": true,
+    "dependencies": true
+  },
+  "exclude": {
+    "paths": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build"
+    ],
+    "extensions": [
+      ".png",
+      ".jpg",
+      ".svg",
+      ".lock"
+    ]
+  },
+  "severity_threshold": "MEDIUM",
+  "custom_rules": {
+    "enabled": true,
+    "path": "./custom-ash-rules"
+  },
+  "report": {
+    "format": "text",
+    "detailed": true
+  }
+}

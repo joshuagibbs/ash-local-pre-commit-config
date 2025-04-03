@@ -16,12 +16,14 @@
 - [About](#about)
 - [Getting Started](#getting_started)
 - [Usage](#usage)
+- [Configuration](#configuration)
+- [Advanced Features](#advanced_features)
 - [Authors](#authors)
 - [Acknowledgments](#acknowledgement)
 
 ## 🧐 About <a name = "about"></a>
 
-A short script that can be run locally on your machine that will configure a Git pre-commit hook in your repo to use the AWS Automated Security Helper (ASH) tool to scan your code before any commit is accepted.
+A robust script that can be run locally on your machine to configure a Git pre-commit hook in your repository. This hook uses the AWS Automated Security Helper (ASH) tool to scan your code for security issues before any commit is accepted, helping you maintain secure coding practices.
 
 ## 🏁 Getting Started <a name = "getting_started"></a>
 
@@ -29,35 +31,41 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-This project is designed to run on MacOS and assumes the following pre-requisites are in place.
+This project is designed to run on MacOS and assumes the following pre-requisites are in place:
 
-- You have a folder name 'Git' in your 'Documents' folder where you are cloning your repos to.
-- You have cloned the repo for the [AWS Automated Security Helper (ASH)](https://github.com/awslabs/automated-security-helper) tool into the 'Git' folder.
-- You have [Docker Desktop](https://www.docker.com/products/docker-desktop/) or other Docker like environment running locally.
-- The repo where you want to implement the git pre-commit hook is also cloned into your 'Git' folder.
+- You have [Docker Desktop](https://www.docker.com/products/docker-desktop/) or other Docker-like environment running locally.
+- You have cloned the repo for the [AWS Automated Security Helper (ASH)](https://github.com/awslabs/automated-security-helper) tool.
+- The repo where you want to implement the git pre-commit hook is a valid git repository.
 
 ### Installing
 
-Clone this repo into your 'Git' folder.
+Clone this repo:
 
-```
-cd "${HOME}"/Documents/Git
+```bash
 git clone https://github.com/joshuagibbs/ash-local-pre-commit-config.git
+cd ash-local-pre-commit-config
 ```
 
-Make sure that ash-config.sh is executable
+Make sure that ash-config.sh is executable:
 
-```
-chmod +x /ash-local-pre-commit-config/ash-config.sh
-```
-
-Execute ash-config.sh against your repo
-
-```
-./ash-local-pre-commit-config/ash-config.sh "${HOME}"/Documents/Git/<REPO_NAME>
+```bash
+chmod +x ./ash-config.sh
 ```
 
-This copies the file 'pre-commit' file into the .git/hooks directory in your repo which create a git pre-commit hook.
+Execute ash-config.sh against your repo:
+
+```bash
+# Basic usage
+./ash-config.sh /path/to/your/repo
+
+# With custom Git folder location
+./ash-config.sh --git-folder /custom/path/to/git/folder /path/to/your/repo
+
+# Show help
+./ash-config.sh --help
+```
+
+This copies the pre-commit file into the .git/hooks directory in your repo which creates a git pre-commit hook. Any existing pre-commit hook will be backed up.
 
 <p align="center">
   <a href="" rel="noopener">
@@ -73,7 +81,94 @@ When you commit code changes, before they are accepted the code in the repo will
  <img width=854px height=661px src="/images/ash-success.png" alt="ASH success example"></a>
 </p>
 
-If one more of the ASH security checks fail the log (aggregated_results.txt) will be displayed in the console so you can see which ASH security checks are failing and perform the necessary remediation before attempting your commit again.
+If one or more of the ASH security checks fail, the log (aggregated_results.txt) will be displayed in the console so you can see which ASH security checks are failing and perform the necessary remediation before attempting your commit again.
+
+### Bypassing the Hook
+
+In emergency situations, you can bypass the ASH check by setting the `SKIP_ASH` environment variable:
+
+```bash
+SKIP_ASH=1 git commit -m "Emergency fix"
+```
+
+## ⚙️ Configuration <a name = "configuration"></a>
+
+### Pre-commit Hook Configuration
+
+You can customize the behavior of the pre-commit hook by editing the configuration variables at the top of the pre-commit file:
+
+```bash
+# Configuration (can be customized)
+ASH_REPO_DIR="${HOME}/Documents/Git"
+ASH_REPO_NAME="automated-security-helper"
+ASH_OUTPUT_DIR="${PWD}/.git/logs"
+ASH_CONFIG_FILE="${PWD}/.ash-config.json"
+SKIP_ASH_ENV_VAR="SKIP_ASH"
+CHANGED_FILES_ONLY=false
+COLORIZE_OUTPUT=true
+```
+
+Key options:
+- `CHANGED_FILES_ONLY`: When set to `true`, only scans files that are staged for commit
+- `COLORIZE_OUTPUT`: Enables/disables colored terminal output
+- `SKIP_ASH_ENV_VAR`: The environment variable name used to bypass ASH checks
+
+### ASH Configuration File
+
+You can create a `.ash-config.json` file in your repository root to customize ASH behavior:
+
+```json
+{
+  "scanners": {
+    "secrets": true,
+    "sast": true,
+    "sbom": true,
+    "iac": true,
+    "dependencies": true
+  },
+  "exclude": {
+    "paths": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build"
+    ],
+    "extensions": [
+      ".png",
+      ".jpg",
+      ".svg",
+      ".lock"
+    ]
+  },
+  "severity_threshold": "MEDIUM",
+  "custom_rules": {
+    "enabled": true,
+    "path": "./custom-ash-rules"
+  },
+  "report": {
+    "format": "text",
+    "detailed": true
+  }
+}
+```
+
+## 🔧 Advanced Features <a name = "advanced_features"></a>
+
+### Scanning Only Changed Files
+
+By default, ASH scans the entire repository. For large repositories, this can be time-consuming. You can configure the pre-commit hook to only scan files that are staged for commit by setting `CHANGED_FILES_ONLY=true` in the pre-commit file.
+
+### Custom Rules
+
+You can create custom ASH rules by setting up a custom rules directory and configuring it in the `.ash-config.json` file.
+
+### Progress Indicator
+
+The pre-commit hook now displays a spinner while ASH is running, providing visual feedback during the scan.
+
+### Docker and ASH Checks
+
+The pre-commit hook now checks if Docker is running and if ASH is installed before attempting to run the scan, providing helpful error messages if either is missing.
 
 ## ✍️ Authors <a name = "authors"></a>
 
