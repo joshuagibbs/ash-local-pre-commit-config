@@ -113,9 +113,11 @@ Key options:
 - `COLORIZE_OUTPUT`: Enables/disables colored terminal output
 - `SKIP_ASH_ENV_VAR`: The environment variable name used to bypass ASH checks
 
-### ASH Configuration File
+### ASH Configuration
 
-You can create a `.ash-config.json` file in your repository root to customize ASH behavior:
+ASH doesn't directly support a configuration file with the `--config` option. Instead, configuration is typically done through environment variables or command-line options.
+
+The pre-commit hook includes a reference to a `.ash-config.json` file for documentation purposes, but this file is not directly used by ASH. The sample file structure below shows what options might be available in ASH:
 
 ```json
 {
@@ -151,6 +153,8 @@ You can create a `.ash-config.json` file in your repository root to customize AS
   }
 }
 ```
+
+To configure ASH, refer to the [official ASH documentation](https://github.com/awslabs/automated-security-helper) for available command-line options and environment variables.
 
 ## 🔧 Advanced Features <a name = "advanced_features"></a>
 

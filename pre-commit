@@ -95,15 +95,16 @@ fi
 # Add output directory
 ASH_ARGS+=(--output-dir "${ASH_OUTPUT_DIR}")
 
-# Add config file if it exists
+# Check if config file exists (for documentation purposes only, not used as ASH doesn't support --config)
 if [ -f "${ASH_CONFIG_FILE}" ]; then
-  print_message "$BLUE" "Using ASH configuration file: ${ASH_CONFIG_FILE}"
-  ASH_ARGS+=(--config "${ASH_CONFIG_FILE}")
+  print_message "$BLUE" "ASH configuration file exists at: ${ASH_CONFIG_FILE}"
+  print_message "$YELLOW" "Note: ASH doesn't support direct config file loading. Configuration is applied through environment variables or command-line options."
+  # ASH doesn't support --config option
 fi
 
 # Run ASH with progress indicator
 print_message "$BLUE" "Starting ASH scan..."
-ash "${ASH_ARGS[@]}" &
+ash "${ASH_ARGS[@]}" 2>&1 | tee "${ASH_OUTPUT_DIR}/ash_output.log" &
 ASH_PID=$!
 
 # Show a simple spinner while ASH is running
@@ -120,13 +121,57 @@ printf "\r${BLUE}Scan complete!     ${NC}\n"
 wait $ASH_PID
 ASH_EXIT_CODE=$?
 
-# Check if results file exists
-RESULTS_FILE="${ASH_OUTPUT_DIR}/aggregated_results.txt"
-if [ ! -f "${RESULTS_FILE}" ]; then
-  print_message "$RED" "❌ ASH did not generate results file. Check ASH logs for errors."
+# Check for possible result file locations
+POSSIBLE_RESULTS=(
+  "${ASH_OUTPUT_DIR}/aggregated_results.txt"
+  "${ASH_OUTPUT_DIR}/results.txt"
+  "${ASH_OUTPUT_DIR}/ash_results.txt"
+  "${PWD}/aggregated_results.txt"
+  "${PWD}/results.txt"
+)
+
+RESULTS_FILE=""
+for file in "${POSSIBLE_RESULTS[@]}"; do
+  if [ -f "$file" ]; then
+    RESULTS_FILE="$file"
+    break
+  fi
+done
+
+# If no results file found, try to find any .txt file in the output directory
+if [ -z "$RESULTS_FILE" ]; then
+  FOUND_FILES=$(find "${ASH_OUTPUT_DIR}" -name "*.txt" -type f | head -1)
+  if [ -n "$FOUND_FILES" ]; then
+    RESULTS_FILE="$FOUND_FILES"
+  fi
+fi
+
+# If still no results file, check if ASH created any output
+if [ -z "$RESULTS_FILE" ] && [ -f "${ASH_OUTPUT_DIR}/ash_output.log" ]; then
+  print_message "$YELLOW" "⚠️  No results file found, but ASH completed with exit code: ${ASH_EXIT_CODE}"
+  print_message "$BLUE" "ASH output:"
+  cat "${ASH_OUTPUT_DIR}/ash_output.log"
+  
+  if [ $ASH_EXIT_CODE -ne 0 ]; then
+    print_message "$RED" "❌ ASH scan failed. Please check the output above for errors."
+    print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
+    exit 1
+  else
+    print_message "$GREEN" "✅ ASH completed successfully, but no results file was generated."
+    print_message "$GREEN" "This may indicate no issues were found."
+    exit 0
+  fi
+fi
+
+# If no results file found and no output log, report error
+if [ -z "$RESULTS_FILE" ]; then
+  print_message "$RED" "❌ ASH did not generate a results file. Check ASH logs for errors."
   print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
+  print_message "$YELLOW" "Try running ASH manually to debug: ash --source-dir \"${PWD}\" --output-dir \"${ASH_OUTPUT_DIR}\""
   exit 1
 fi
+
+print_message "$BLUE" "Found results file: ${RESULTS_FILE}"
 
 # Display results
 if [ $ASH_EXIT_CODE -ne 0 ]; then

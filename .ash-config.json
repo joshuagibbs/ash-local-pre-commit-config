@@ -1,4 +1,8 @@
 {
+  "// NOTE": "This is a SAMPLE configuration file for documentation purposes only.",
+  "// WARNING": "ASH does not directly support loading configuration from a file with --config option.",
+  "// USAGE": "This file structure documents potential ASH options that would typically be set via command line or environment variables.",
+  
   "scanners": {
     "secrets": true,
     "sast": true,
