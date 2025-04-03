@@ -7,10 +7,25 @@
 ASH_REPO_DIR="${HOME}/Documents/Git"
 ASH_REPO_NAME="automated-security-helper"
 ASH_OUTPUT_DIR="${PWD}/.git/logs"
-ASH_CONFIG_FILE="${PWD}/.ash-config.json"
 SKIP_ASH_ENV_VAR="SKIP_ASH"
 CHANGED_FILES_ONLY=false
 COLORIZE_OUTPUT=true
+
+# Custom rules configuration (uncomment to use)
+# ASH_CUSTOM_RULES_DIR="${PWD}/custom-ash-rules"
+
+# ASH Scanner Configuration
+# Set these variables to customize ASH behavior
+ASH_ENABLE_SECRETS_SCANNER=true
+ASH_ENABLE_SAST_SCANNER=true
+ASH_ENABLE_SBOM_SCANNER=true
+ASH_ENABLE_IAC_SCANNER=true
+ASH_ENABLE_DEPENDENCIES_SCANNER=true
+ASH_SEVERITY_THRESHOLD="MEDIUM"  # Options: LOW, MEDIUM, HIGH, CRITICAL
+
+# Exclusion patterns (space-separated lists)
+ASH_EXCLUDE_PATHS="node_modules .git dist build"
+ASH_EXCLUDE_EXTENSIONS=".png .jpg .svg .lock"
 
 # Color definitions
 if [ "$COLORIZE_OUTPUT" = true ]; then
@@ -95,11 +110,64 @@ fi
 # Add output directory
 ASH_ARGS+=(--output-dir "${ASH_OUTPUT_DIR}")
 
-# Check if config file exists (for documentation purposes only, not used as ASH doesn't support --config)
-if [ -f "${ASH_CONFIG_FILE}" ]; then
-  print_message "$BLUE" "ASH configuration file exists at: ${ASH_CONFIG_FILE}"
-  print_message "$YELLOW" "Note: ASH doesn't support direct config file loading. Configuration is applied through environment variables or command-line options."
-  # ASH doesn't support --config option
+# Apply ASH configuration through environment variables
+print_message "$BLUE" "Applying ASH configuration..."
+
+# Set scanner configuration
+if [ "$ASH_ENABLE_SECRETS_SCANNER" = true ]; then
+  print_message "$BLUE" "- Enabling secrets scanner"
+  export ASH_ENABLE_SECRETS=true
+else
+  export ASH_ENABLE_SECRETS=false
+fi
+
+if [ "$ASH_ENABLE_SAST_SCANNER" = true ]; then
+  print_message "$BLUE" "- Enabling SAST scanner"
+  export ASH_ENABLE_SAST=true
+else
+  export ASH_ENABLE_SAST=false
+fi
+
+if [ "$ASH_ENABLE_SBOM_SCANNER" = true ]; then
+  print_message "$BLUE" "- Enabling SBOM scanner"
+  export ASH_ENABLE_SBOM=true
+else
+  export ASH_ENABLE_SBOM=false
+fi
+
+if [ "$ASH_ENABLE_IAC_SCANNER" = true ]; then
+  print_message "$BLUE" "- Enabling IaC scanner"
+  export ASH_ENABLE_IAC=true
+else
+  export ASH_ENABLE_IAC=false
+fi
+
+if [ "$ASH_ENABLE_DEPENDENCIES_SCANNER" = true ]; then
+  print_message "$BLUE" "- Enabling dependencies scanner"
+  export ASH_ENABLE_DEPENDENCIES=true
+else
+  export ASH_ENABLE_DEPENDENCIES=false
+fi
+
+# Set severity threshold
+print_message "$BLUE" "- Setting severity threshold to ${ASH_SEVERITY_THRESHOLD}"
+export ASH_SEVERITY_THRESHOLD="${ASH_SEVERITY_THRESHOLD}"
+
+# Set exclusions
+if [ -n "$ASH_EXCLUDE_PATHS" ]; then
+  print_message "$BLUE" "- Excluding paths: ${ASH_EXCLUDE_PATHS}"
+  export ASH_EXCLUDE_PATHS="${ASH_EXCLUDE_PATHS}"
+fi
+
+if [ -n "$ASH_EXCLUDE_EXTENSIONS" ]; then
+  print_message "$BLUE" "- Excluding extensions: ${ASH_EXCLUDE_EXTENSIONS}"
+  export ASH_EXCLUDE_EXTENSIONS="${ASH_EXCLUDE_EXTENSIONS}"
+fi
+
+# Set custom rules directory if defined
+if [ -n "$ASH_CUSTOM_RULES_DIR" ] && [ -d "$ASH_CUSTOM_RULES_DIR" ]; then
+  print_message "$BLUE" "- Using custom rules from: ${ASH_CUSTOM_RULES_DIR}"
+  export ASH_CUSTOM_RULES_DIR="${ASH_CUSTOM_RULES_DIR}"
 fi
 
 # Run ASH with progress indicator

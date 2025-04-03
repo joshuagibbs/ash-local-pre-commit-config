@@ -102,10 +102,12 @@ You can customize the behavior of the pre-commit hook by editing the configurati
 ASH_REPO_DIR="${HOME}/Documents/Git"
 ASH_REPO_NAME="automated-security-helper"
 ASH_OUTPUT_DIR="${PWD}/.git/logs"
-ASH_CONFIG_FILE="${PWD}/.ash-config.json"
 SKIP_ASH_ENV_VAR="SKIP_ASH"
 CHANGED_FILES_ONLY=false
 COLORIZE_OUTPUT=true
+
+# Custom rules configuration (uncomment to use)
+# ASH_CUSTOM_RULES_DIR="${PWD}/custom-ash-rules"
 ```
 
 Key options:
@@ -115,46 +117,30 @@ Key options:
 
 ### ASH Configuration
 
-ASH doesn't directly support a configuration file with the `--config` option. Instead, configuration is typically done through environment variables or command-line options.
+ASH configuration is handled directly in the pre-commit hook through environment variables. You can customize ASH behavior by editing the configuration variables at the top of the pre-commit file:
 
-The pre-commit hook includes a reference to a `.ash-config.json` file for documentation purposes, but this file is not directly used by ASH. The sample file structure below shows what options might be available in ASH:
+```bash
+# ASH Scanner Configuration
+# Set these variables to customize ASH behavior
+ASH_ENABLE_SECRETS_SCANNER=true
+ASH_ENABLE_SAST_SCANNER=true
+ASH_ENABLE_SBOM_SCANNER=true
+ASH_ENABLE_IAC_SCANNER=true
+ASH_ENABLE_DEPENDENCIES_SCANNER=true
+ASH_SEVERITY_THRESHOLD="MEDIUM"  # Options: LOW, MEDIUM, HIGH, CRITICAL
 
-```json
-{
-  "scanners": {
-    "secrets": true,
-    "sast": true,
-    "sbom": true,
-    "iac": true,
-    "dependencies": true
-  },
-  "exclude": {
-    "paths": [
-      "node_modules",
-      ".git",
-      "dist",
-      "build"
-    ],
-    "extensions": [
-      ".png",
-      ".jpg",
-      ".svg",
-      ".lock"
-    ]
-  },
-  "severity_threshold": "MEDIUM",
-  "custom_rules": {
-    "enabled": true,
-    "path": "./custom-ash-rules"
-  },
-  "report": {
-    "format": "text",
-    "detailed": true
-  }
-}
+# Exclusion patterns (space-separated lists)
+ASH_EXCLUDE_PATHS="node_modules .git dist build"
+ASH_EXCLUDE_EXTENSIONS=".png .jpg .svg .lock"
 ```
 
-To configure ASH, refer to the [official ASH documentation](https://github.com/awslabs/automated-security-helper) for available command-line options and environment variables.
+These settings control:
+
+- Which scanners are enabled (secrets, SAST, SBOM, IaC, dependencies)
+- The minimum severity threshold for reporting issues
+- Which paths and file extensions to exclude from scanning
+
+The pre-commit hook automatically converts these settings to the appropriate environment variables that ASH uses. For more details on ASH configuration options, refer to the [official ASH documentation](https://github.com/awslabs/automated-security-helper).
 
 ## 🔧 Advanced Features <a name = "advanced_features"></a>
 
@@ -164,7 +150,22 @@ By default, ASH scans the entire repository. For large repositories, this can be
 
 ### Custom Rules
 
-You can create custom ASH rules by setting up a custom rules directory and configuring it in the `.ash-config.json` file.
+You can create custom ASH rules by setting up a custom rules directory. To use custom rules, you would need to add a configuration variable in the pre-commit file, for example:
+
+```bash
+# Custom rules configuration
+ASH_CUSTOM_RULES_DIR="${PWD}/custom-ash-rules"
+```
+
+And then add the appropriate environment variable export in the configuration section:
+
+```bash
+# Set custom rules directory
+if [ -d "$ASH_CUSTOM_RULES_DIR" ]; then
+  print_message "$BLUE" "- Using custom rules from: ${ASH_CUSTOM_RULES_DIR}"
+  export ASH_CUSTOM_RULES_DIR="${ASH_CUSTOM_RULES_DIR}"
+fi
+```
 
 ### Progress Indicator
 
