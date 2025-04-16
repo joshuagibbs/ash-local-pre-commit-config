@@ -129,7 +129,7 @@ The pre-commit hook now displays a spinner while ASH is running, providing visua
 
 ### Docker and ASH Checks
 
-The pre-commit hook now checks if Docker is running and if ASH is installed before attempting to run the scan, providing helpful error messages if either is missing.
+The pre-commit hook now checks if a Docker compatible runtime is running and if the ASH repo is cloned locally before attempting to run the scan, providing helpful error messages if either is missing.
 
 ## ✍️ Authors <a name = "authors"></a>
 
