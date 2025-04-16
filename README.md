@@ -113,7 +113,6 @@ ASH_REPO_NAME="automated-security-helper"
 ASH_OUTPUT_DIR="${PWD}/.git/logs"
 RESULTS_FILE="${ASH_OUTPUT_DIR}/aggregated_results.txt"
 SKIP_ASH_ENV_VAR="SKIP_ASH"
-CHANGED_FILES_ONLY=false
 COLORIZE_OUTPUT=true
 
 ```
