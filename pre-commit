@@ -16,6 +16,27 @@ RESULTS_FILE="${ASH_OUTPUT_DIR}/aggregated_results.txt"
 SKIP_ASH_ENV_VAR="SKIP_ASH"
 COLORIZE_OUTPUT=true
 
+# Create output directory if it doesn't exist
+mkdir -p "${ASH_OUTPUT_DIR}"
+
+# Set up logging
+LOG_FILE="${ASH_OUTPUT_DIR}/pre-commit.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+# Function to log messages with timestamp
+log_message() {
+  local message="$1"
+  echo "[${TIMESTAMP}] ${message}" | tee -a "${LOG_FILE}"
+}
+
+# Start logging
+log_message "=== ASH Pre-commit Hook Started ==="
+log_message "Repository: ${PWD}"
+log_message "Log file: ${LOG_FILE}"
+
+# Redirect all output to both console and log file
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
 # Color definitions
 if [ "$COLORIZE_OUTPUT" = true ]; then
   RED='\033[0;31m'
@@ -46,13 +67,15 @@ command_exists() {
 # Check if we should skip ASH checks
 if [ -n "${!SKIP_ASH_ENV_VAR}" ]; then
   print_message "$YELLOW" "⚠️  Skipping ASH security checks (${SKIP_ASH_ENV_VAR} is set)"
+  log_message "ASH checks skipped due to ${SKIP_ASH_ENV_VAR} environment variable"
   exit 0
 fi
 
 # Check if a Docker compatible runtime is running
 if ! command_exists docker || ! docker info >/dev/null 2>&1; then
-  print_message "$RED" "❌ Docker is not running. ASH requires a requires a Docker compatible container runtime to function properly." 
+  print_message "$RED" "❌ Docker is not running. ASH requires a requires a Docker compatible container runtime to function properly."
   print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
+  log_message "ERROR: Docker is not running"
   exit 1
 fi
 
@@ -63,6 +86,7 @@ export PATH="${PATH}:${ASH_REPO_DIR}/${ASH_REPO_NAME}"
 if ! command_exists ash; then
   print_message "$RED" "❌ ASH command not found. Please ensure the ASH repo is clone to: ${ASH_REPO_DIR}/${ASH_REPO_NAME}"
   print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
+  log_message "ERROR: ASH command not found"
   exit 1
 fi
 
@@ -70,10 +94,10 @@ print_message "$BLUE" "Running AWS Automated Security Helper (ASH) pre-commit ch
 echo "Repository: ${PWD}"
 
 # Get ASH version
-VERSION=$(ash --version 2>/dev/null)
-if [ $? -ne 0 ]; then
+if ! VERSION=$(ash --version 2>/dev/null); then
   print_message "$RED" "❌ Failed to get ASH version. Please check your ASH installation."
   print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
+  log_message "ERROR: Failed to get ASH version"
   exit 1
 fi
 print_message "$BLUE" "ASH version: ${VERSION}"
@@ -84,7 +108,7 @@ mkdir -p "${ASH_OUTPUT_DIR}"
 
 # Run ASH with progress indicator
 print_message "$BLUE" "Starting ASH scan..."
-ash --source-dir "${PWD}" --output-dir "${ASH_OUTPUT_DIR}" --format json 2>&1 &
+ash --source-dir "${PWD}" --output-dir "${ASH_OUTPUT_DIR}" --format text --preserve-report --version --debug 2>&1 &
 ASH_PID=$!
 
 # Show a simple spinner while ASH is running
@@ -92,10 +116,10 @@ spin='-\|/'
 i=0
 while kill -0 $ASH_PID 2>/dev/null; do
   i=$(( (i+1) % 4 ))
-  printf "\r${BLUE}Scanning... ${spin:$i:1}${NC}"
+  printf "\r%sScanning... %s%s" "$BLUE" "${spin:$i:1}" "$NC"
   sleep .1
 done
-printf "\r${BLUE}Scan complete!     ${NC}\n"
+printf "\r%sScan complete!     %s\n" "$BLUE" "$NC"
 
 # Wait for ASH to complete and get exit code
 wait $ASH_PID
@@ -107,11 +131,14 @@ if [ $ASH_EXIT_CODE -ne 0 ]; then
   cat "${RESULTS_FILE}"
   print_message "$RED" "❌ ASH found security issues. Please fix them before committing."
   print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
+  log_message "ASH scan completed with security issues found (exit code: ${ASH_EXIT_CODE})"
   exit 1
 else
   print_message "$BLUE" "Results from: ${RESULTS_FILE}"
   cat "${RESULTS_FILE}"
   print_message "$GREEN" "✅ ASH security check passed!"
+  log_message "ASH scan completed successfully (exit code: ${ASH_EXIT_CODE})"
 fi
 
+log_message "=== ASH Pre-commit Hook Completed ==="
 exit 0
