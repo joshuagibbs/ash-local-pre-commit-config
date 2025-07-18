@@ -92,14 +92,14 @@ The hook now provides detailed, color-coded output with comprehensive informatio
 #### Scan Results Display
 When security issues are found, the hook displays:
 
-1. **Detailed File Information**: 
+1. **Detailed File Information**:
    - Specific file paths with security issues
    - Line numbers where problems are detected
    - Precise issue descriptions
 
 2. **Severity-based Grouping** (when enabled):
    - 🚨 **Critical Issues** - Immediate security threats
-   - 🔴 **High Severity** - Significant security risks  
+   - 🔴 **High Severity** - Significant security risks
    - 🟡 **Medium Severity** - Moderate security concerns
    - 🔵 **Low Severity** - Minor security improvements
    - ℹ️ **Informational** - Security best practice suggestions
@@ -122,7 +122,7 @@ When security issues are found, the hook displays:
    ⚠️  Line 23: Hardcoded secret key detected
 
 🟡 MEDIUM SEVERITY ISSUES (2):
-📁 File: app/auth.py  
+📁 File: app/auth.py
    ⚠️  Line 45: Weak password validation
 📁 File: utils/crypto.py
    ⚠️  Line 12: Deprecated cryptographic function
@@ -135,11 +135,6 @@ When security issues are found, the hook displays:
    Low: 0
    Info: 0
 ```
-
-<p align="center">
-  <a href="" rel="noopener">
- <img width=854px height=661px src="/images/ash-scan.png" alt="ASH scan example"></a>
-</p>
 
 <p align="center">
   <a href="" rel="noopener">
@@ -255,7 +250,7 @@ When `OUTPUT_FORMAT="json"` is enabled:
 Security findings are automatically categorized and color-coded:
 - 🚨 **Critical Issues** (Red)
 - 🔴 **High Severity** (Red)
-- 🟡 **Medium Severity** (Yellow)  
+- 🟡 **Medium Severity** (Yellow)
 - 🔵 **Low Severity** (Blue)
 - ℹ️ **Informational** (Green)
 
