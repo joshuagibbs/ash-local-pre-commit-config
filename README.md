@@ -73,7 +73,7 @@ This copies the pre-commit file into the .git/hooks directory in your repo which
 
 <p align="center">
   <a href="" rel="noopener">
- <img width=802px height=551px src="/images/pre-commit.png" alt="pre-commit illustration"></a>
+ <img width=802px height=551px src="/images/pre-commit-hook.png" alt="pre-commit illustration"></a>
 </p>
 
 ## 🎈 Usage <a name="usage"></a>
