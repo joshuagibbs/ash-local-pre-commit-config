@@ -8,6 +8,347 @@ set -e
 # set -x configures the script to print each command (with expanded variables) before executing it, this is very useful when debugging
 # set -x
 
+################################################################################
+#
+# FUNCTIONS
+#
+################################################################################
+
+################################################################################
+#
+# Function to log messages with timestamp
+#
+################################################################################
+log_message() {
+  local message="$1"
+  echo "[${TIMESTAMP}] ${message}" | tee -a "${LOG_FILE}"
+}
+
+################################################################################
+#
+# Function to print colored messages
+#
+################################################################################
+print_message() {
+  local color=$1
+  local message=$2
+  echo -e "${color}${message}${NC}"
+}
+
+################################################################################
+#
+# Function to check if a command exists
+#
+################################################################################
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+################################################################################
+#
+# Enhanced results parsing and display function
+#
+################################################################################
+parse_and_display_results() {
+  local results_file="$1"
+  local verbose="$2"
+  local group_by_severity="$3"
+
+  if [ ! -f "$results_file" ]; then
+    print_message "$RED" "❌ Results file not found: $results_file"
+    return 1
+  fi
+
+  if [ "$verbose" = true ]; then
+    print_message "$BLUE" "📊 Detailed Security Scan Results:"
+    echo ""
+
+    # Initialize counters
+    local total_issues=0
+    local critical_count=0
+    local high_count=0
+    local medium_count=0
+    local low_count=0
+    local info_count=0
+
+    # Arrays to store findings by severity
+    declare -a critical_findings=()
+    declare -a high_findings=()
+    declare -a medium_findings=()
+    declare -a low_findings=()
+    declare -a info_findings=()
+    declare -a other_findings=()
+
+    # Parse results for file-specific findings
+    while IFS= read -r line; do
+      if [[ -n "$line" && ! "$line" =~ ^[[:space:]]*$ ]]; then
+        total_issues=$((total_issues + 1))
+
+        # Extract file path and line number if present
+        if [[ "$line" =~ ^(.+):([0-9]+):[[:space:]]*(.+)$ ]]; then
+          local file="${BASH_REMATCH[1]}"
+          local line_num="${BASH_REMATCH[2]}"
+          local issue="${BASH_REMATCH[3]}"
+          local formatted_finding="📁 File: $file\n   ⚠️  Line $line_num: $issue"
+        else
+          # Handle cases without line numbers
+          local formatted_finding="🔍 $line"
+        fi
+
+        # Categorize by severity if grouping is enabled
+        if [ "$group_by_severity" = true ]; then
+          if [[ "$line" =~ [Cc]ritical|[Cc]rit ]]; then
+            critical_findings+=("$formatted_finding")
+            critical_count=$((critical_count + 1))
+          elif [[ "$line" =~ [Hh]igh ]]; then
+            high_findings+=("$formatted_finding")
+            high_count=$((high_count + 1))
+          elif [[ "$line" =~ [Mm]edium|[Mm]ed ]]; then
+            medium_findings+=("$formatted_finding")
+            medium_count=$((medium_count + 1))
+          elif [[ "$line" =~ [Ll]ow ]]; then
+            low_findings+=("$formatted_finding")
+            low_count=$((low_count + 1))
+          elif [[ "$line" =~ [Ii]nfo|[Ii]nformational ]]; then
+            info_findings+=("$formatted_finding")
+            info_count=$((info_count + 1))
+          else
+            other_findings+=("$formatted_finding")
+          fi
+        else
+          # Display immediately if not grouping
+          if [[ "$line" =~ ^(.+):([0-9]+):[[:space:]]*(.+)$ ]]; then
+            print_message "$YELLOW" "📁 File: ${BASH_REMATCH[1]}"
+            print_message "$RED" "   ⚠️  Line ${BASH_REMATCH[2]}: ${BASH_REMATCH[3]}"
+          else
+            print_message "$YELLOW" "🔍 $line"
+          fi
+        fi
+      fi
+    done < "$results_file"
+
+    # Display grouped results if enabled
+    if [ "$group_by_severity" = true ]; then
+      # Critical issues
+      if [ ${#critical_findings[@]} -gt 0 ]; then
+        print_message "$RED" "🚨 CRITICAL ISSUES ($critical_count):"
+        for finding in "${critical_findings[@]}"; do
+          echo -e "${RED}${finding}${NC}"
+        done
+        echo ""
+      fi
+
+      # High severity issues
+      if [ ${#high_findings[@]} -gt 0 ]; then
+        print_message "$RED" "🔴 HIGH SEVERITY ISSUES ($high_count):"
+        for finding in "${high_findings[@]}"; do
+          echo -e "${RED}${finding}${NC}"
+        done
+        echo ""
+      fi
+
+      # Medium severity issues
+      if [ ${#medium_findings[@]} -gt 0 ]; then
+        print_message "$YELLOW" "🟡 MEDIUM SEVERITY ISSUES ($medium_count):"
+        for finding in "${medium_findings[@]}"; do
+          echo -e "${YELLOW}${finding}${NC}"
+        done
+        echo ""
+      fi
+
+      # Low severity issues
+      if [ ${#low_findings[@]} -gt 0 ]; then
+        print_message "$BLUE" "🔵 LOW SEVERITY ISSUES ($low_count):"
+        for finding in "${low_findings[@]}"; do
+          echo -e "${BLUE}${finding}${NC}"
+        done
+        echo ""
+      fi
+
+      # Info issues
+      if [ ${#info_findings[@]} -gt 0 ]; then
+        print_message "$GREEN" "ℹ️  INFORMATIONAL ($info_count):"
+        for finding in "${info_findings[@]}"; do
+          echo -e "${GREEN}${finding}${NC}"
+        done
+        echo ""
+      fi
+
+      # Other findings
+      if [ ${#other_findings[@]} -gt 0 ]; then
+        print_message "$YELLOW" "🔍 OTHER FINDINGS:"
+        for finding in "${other_findings[@]}"; do
+          echo -e "${YELLOW}${finding}${NC}"
+        done
+        echo ""
+      fi
+    fi
+
+    # Display summary statistics
+    print_message "$BLUE" "📈 SCAN SUMMARY:"
+    echo "   Total findings: $total_issues"
+    if [ "$group_by_severity" = true ]; then
+      echo "   Critical: $critical_count"
+      echo "   High: $high_count"
+      echo "   Medium: $medium_count"
+      echo "   Low: $low_count"
+      echo "   Info: $info_count"
+    fi
+    echo ""
+
+  else
+    # Fallback to current behavior
+    cat "$results_file"
+  fi
+}
+
+################################################################################
+#
+# JSON parsing function for structured ASH output
+#
+################################################################################
+parse_json_results() {
+  local json_file="$1"
+  local verbose="$2"
+
+  if [ ! -f "$json_file" ]; then
+    print_message "$RED" "❌ JSON results file not found: $json_file"
+    return 1
+  fi
+
+  # Check if jq is available for JSON parsing
+  if ! command_exists jq; then
+    print_message "$YELLOW" "⚠️  jq not found. Falling back to text parsing."
+    parse_and_display_results "$json_file" "$verbose" "$GROUP_BY_SEVERITY"
+    return
+  fi
+
+  if [ "$verbose" = true ]; then
+    print_message "$BLUE" "📊 Detailed Security Scan Results (JSON):"
+    echo ""
+
+    # Parse JSON and extract findings
+    local findings_count
+    findings_count=$(jq -r '. | length' "$json_file" 2>/dev/null || echo "0")
+
+    if [ "$findings_count" -gt 0 ]; then
+      # Extract and display each finding with structured information
+      jq -r '.[] | "\(.file):\(.line // "N/A"):\(.severity // "unknown"):\(.message)"' "$json_file" 2>/dev/null | while IFS=: read -r file line severity message; do
+        if [ -n "$file" ]; then
+          case "$severity" in
+            "critical"|"CRITICAL")
+              print_message "$RED" "🚨 CRITICAL - File: $file"
+              ;;
+            "high"|"HIGH")
+              print_message "$RED" "🔴 HIGH - File: $file"
+              ;;
+            "medium"|"MEDIUM")
+              print_message "$YELLOW" "🟡 MEDIUM - File: $file"
+              ;;
+            "low"|"LOW")
+              print_message "$BLUE" "🔵 LOW - File: $file"
+              ;;
+            "info"|"INFO"|"informational"|"INFORMATIONAL")
+              print_message "$GREEN" "ℹ️  INFO - File: $file"
+              ;;
+            *)
+              print_message "$YELLOW" "🔍 UNKNOWN - File: $file"
+              ;;
+          esac
+
+          if [ "$line" != "N/A" ]; then
+            echo "   ⚠️  Line $line: $message"
+          else
+            echo "   ⚠️  $message"
+          fi
+          echo ""
+        fi
+      done
+
+      print_message "$BLUE" "📈 SCAN SUMMARY:"
+      echo "   Total findings: $findings_count"
+    else
+      print_message "$GREEN" "✅ No security issues found!"
+    fi
+  else
+    # Simple JSON display
+    if command_exists jq; then
+      jq . "$json_file"
+    else
+      cat "$json_file"
+    fi
+  fi
+}
+
+################################################################################
+#
+# Real-time progress monitoring function
+#
+################################################################################
+monitor_ash_progress() {
+  local ash_pid="$1"
+  local output_dir="$2"
+  local real_time="$3"
+
+  if [ "$real_time" != true ]; then
+    # Fallback to simple spinner
+    spin='-\|/'
+    i=0
+    while kill -0 "$ash_pid" 2>/dev/null; do
+      i=$(( (i+1) % 4 ))
+      printf "\r%sScanning... %s%s" "$BLUE" "${spin:$i:1}" "$NC"
+      sleep .1
+    done
+    printf "\r%sScan complete!     %s\n" "$BLUE" "$NC"
+    return
+  fi
+
+################################################################################
+#
+# Advanced progress monitoring
+#
+################################################################################
+
+  local last_file=""
+  local scan_count=0
+
+  print_message "$BLUE" "🔍 Real-time scan progress:"
+
+  while kill -0 "$ash_pid" 2>/dev/null; do
+    # Monitor log files for current scanning activity
+    if [ -f "${output_dir}/pre-commit.log" ]; then
+      # Look for recent file scanning patterns in log
+      local current_activity
+      current_activity=$(tail -n 5 "${output_dir}/pre-commit.log" 2>/dev/null | grep -E "(Scanning|Processing|Analyzing)" | tail -n 1 || echo "")
+
+      if [ -n "$current_activity" ] && [ "$current_activity" != "$last_file" ]; then
+        scan_count=$((scan_count + 1))
+        printf "\r%s[%d] %s%s" "$YELLOW" "$scan_count" "$current_activity" "$NC"
+        last_file="$current_activity"
+      fi
+    fi
+
+    # Check for any intermediate results
+    if [ -f "${RESULTS_FILE}" ]; then
+      local current_issues
+      current_issues=$(wc -l < "${RESULTS_FILE}" 2>/dev/null || echo "0")
+      if [ "$current_issues" -gt 0 ]; then
+        printf "\r%s[%d files] %d issues found...%s" "$YELLOW" "$scan_count" "$current_issues" "$NC"
+      fi
+    fi
+
+    sleep 0.5
+  done
+
+  printf "\r%s✅ Scan completed! Processed %d items.%s\n" "$GREEN" "$scan_count" "$NC"
+}
+
+################################################################################
+#
+# CONFIGURATION
+#
+################################################################################
+
 # Configuration (can be customized)
 ASH_REPO_DIR="${HOME}/Documents/Git"
 ASH_REPO_NAME="automated-security-helper"
@@ -16,18 +357,19 @@ RESULTS_FILE="${ASH_OUTPUT_DIR}/aggregated_results.txt"
 SKIP_ASH_ENV_VAR="SKIP_ASH"
 COLORIZE_OUTPUT=true
 
+# Enhanced output options
+VERBOSE_OUTPUT=true
+OUTPUT_FORMAT="json"  # "text" or "json"
+SHOW_DEBUG_INFO=false
+GROUP_BY_SEVERITY=true
+REAL_TIME_PROGRESS=true
+
 # Create output directory if it doesn't exist
 mkdir -p "${ASH_OUTPUT_DIR}"
 
 # Set up logging
 LOG_FILE="${ASH_OUTPUT_DIR}/pre-commit.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
-# Function to log messages with timestamp
-log_message() {
-  local message="$1"
-  echo "[${TIMESTAMP}] ${message}" | tee -a "${LOG_FILE}"
-}
 
 # Start logging
 log_message "=== ASH Pre-commit Hook Started ==="
@@ -52,17 +394,11 @@ else
   NC=''
 fi
 
-# Function to print colored messages
-print_message() {
-  local color=$1
-  local message=$2
-  echo -e "${color}${message}${NC}"
-}
-
-# Function to check if a command exists
-command_exists() {
-  command -v "$1" >/dev/null 2>&1
-}
+################################################################################
+#
+# MAIN EXECUTION
+#
+################################################################################
 
 # Check if we should skip ASH checks
 if [ -n "${!SKIP_ASH_ENV_VAR}" ]; then
@@ -106,36 +442,69 @@ print_message "$BLUE" "ASH version: ${VERSION}"
 print_message "$BLUE" "Output directory: ${ASH_OUTPUT_DIR}"
 mkdir -p "${ASH_OUTPUT_DIR}"
 
-# Run ASH with progress indicator
+# Run ASH with enhanced configuration
 print_message "$BLUE" "Starting ASH scan..."
-ash --source-dir "${PWD}" --output-dir "${ASH_OUTPUT_DIR}" --format text --preserve-report --version --debug 2>&1 &
+
+# Build ASH command with configuration options
+print_message "$BLUE" "Current directory: ${PWD}"
+ASH_CMD="ash --source-dir \"${PWD}\" --output-dir \"${ASH_OUTPUT_DIR}\" --preserve-report"
+
+# Add format option
+if [ "$OUTPUT_FORMAT" = "json" ]; then
+  ASH_CMD="$ASH_CMD --format json"
+else
+  ASH_CMD="$ASH_CMD --format text"
+fi
+
+# Add debug flag if enabled
+if [ "$SHOW_DEBUG_INFO" = true ]; then
+  ASH_CMD="$ASH_CMD --debug"
+fi
+
+print_message "$BLUE" "Executing: $ASH_CMD"
+
+# Execute ASH command
+eval "$ASH_CMD" 2>&1 &
 ASH_PID=$!
 
-# Show a simple spinner while ASH is running
-spin='-\|/'
-i=0
-while kill -0 $ASH_PID 2>/dev/null; do
-  i=$(( (i+1) % 4 ))
-  printf "\r%sScanning... %s%s" "$BLUE" "${spin:$i:1}" "$NC"
-  sleep .1
-done
-printf "\r%sScan complete!     %s\n" "$BLUE" "$NC"
+# Monitor progress with enhanced or simple spinner
+monitor_ash_progress "$ASH_PID" "$ASH_OUTPUT_DIR" "$REAL_TIME_PROGRESS"
 
 # Wait for ASH to complete and get exit code
 wait $ASH_PID
 ASH_EXIT_CODE=$?
 
-# Display results
+# Find the actual results file (ASH creates timestamped files)
+ACTUAL_RESULTS_FILE=$(find "${ASH_OUTPUT_DIR}" -name "aggregated_results*.txt" -type f 2>/dev/null | head -1)
+
+if [ -z "$ACTUAL_RESULTS_FILE" ]; then
+  ACTUAL_RESULTS_FILE="$RESULTS_FILE"  # Fallback to original filename
+fi
+
+# Display results with enhanced formatting
+print_message "$BLUE" "Results from: ${ACTUAL_RESULTS_FILE}"
+
+# Check if results file exists
+if [ ! -f "$ACTUAL_RESULTS_FILE" ]; then
+  print_message "$RED" "❌ JSON results file not found: ${ACTUAL_RESULTS_FILE}"
+  log_message "ERROR: Results file not found: ${ACTUAL_RESULTS_FILE}"
+  exit 1
+fi
+
+# Use appropriate parser based on output format
+if [ "$OUTPUT_FORMAT" = "json" ]; then
+  parse_json_results "$ACTUAL_RESULTS_FILE" "$VERBOSE_OUTPUT"
+else
+  parse_and_display_results "$ACTUAL_RESULTS_FILE" "$VERBOSE_OUTPUT" "$GROUP_BY_SEVERITY"
+fi
+
+# Final status and exit logic
 if [ $ASH_EXIT_CODE -ne 0 ]; then
-  print_message "$YELLOW" "Results from: ${RESULTS_FILE}"
-  cat "${RESULTS_FILE}"
   print_message "$RED" "❌ ASH found security issues. Please fix them before committing."
   print_message "$YELLOW" "⚠️  To bypass this check, use: ${SKIP_ASH_ENV_VAR}=1 git commit"
   log_message "ASH scan completed with security issues found (exit code: ${ASH_EXIT_CODE})"
   exit 1
 else
-  print_message "$BLUE" "Results from: ${RESULTS_FILE}"
-  cat "${RESULTS_FILE}"
   print_message "$GREEN" "✅ ASH security check passed!"
   log_message "ASH scan completed successfully (exit code: ${ASH_EXIT_CODE})"
 fi

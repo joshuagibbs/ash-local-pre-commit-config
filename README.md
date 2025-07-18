@@ -17,7 +17,7 @@
 - [Getting Started](#getting_started)
 - [Usage](#usage)
 - [Configuration](#configuration)
-- [Advanced Features](#advanced_features)
+- [Enhanced Features](#enhanced_features)
 - [Authors](#authors)
 - [Acknowledgments](#acknowledgement)
 
@@ -78,7 +78,63 @@ This copies the pre-commit file into the .git/hooks directory in your repo which
 
 ## 🎈 Usage <a name="usage"></a>
 
-When you commit code changes, before they are accepted the code in the repo will be scanned by [ASH](https://github.com/awslabs/automated-security-helper) and will need to pass all of the ASH security checks before the commit is accepted.
+When you commit code changes, the pre-commit hook automatically scans your code using [ASH](https://github.com/awslabs/automated-security-helper). The code must pass all ASH security checks before the commit is accepted.
+
+### Enhanced Scan Output
+
+The hook now provides detailed, color-coded output with comprehensive information:
+
+#### During Scanning
+- **Real-time Progress**: Live updates showing scan progress and file counts
+- **Visual Indicators**: Spinner or detailed progress monitoring based on configuration
+- **Current Activity**: Display of files being processed (when real-time monitoring enabled)
+
+#### Scan Results Display
+When security issues are found, the hook displays:
+
+1. **Detailed File Information**: 
+   - Specific file paths with security issues
+   - Line numbers where problems are detected
+   - Precise issue descriptions
+
+2. **Severity-based Grouping** (when enabled):
+   - 🚨 **Critical Issues** - Immediate security threats
+   - 🔴 **High Severity** - Significant security risks  
+   - 🟡 **Medium Severity** - Moderate security concerns
+   - 🔵 **Low Severity** - Minor security improvements
+   - ℹ️ **Informational** - Security best practice suggestions
+
+3. **Summary Statistics**:
+   - Total number of files scanned
+   - Count of issues by severity level
+   - Overall scan completion status
+
+#### Example Enhanced Output
+```
+🔍 Real-time scan progress:
+[15 files] 3 issues found...
+✅ Scan completed! Processed 15 items.
+
+📊 Detailed Security Scan Results:
+
+🚨 CRITICAL ISSUES (1):
+📁 File: src/config.py
+   ⚠️  Line 23: Hardcoded secret key detected
+
+🟡 MEDIUM SEVERITY ISSUES (2):
+📁 File: app/auth.py  
+   ⚠️  Line 45: Weak password validation
+📁 File: utils/crypto.py
+   ⚠️  Line 12: Deprecated cryptographic function
+
+📈 SCAN SUMMARY:
+   Total findings: 3
+   Critical: 1
+   High: 0
+   Medium: 2
+   Low: 0
+   Info: 0
+```
 
 <p align="center">
   <a href="" rel="noopener">
@@ -90,7 +146,13 @@ When you commit code changes, before they are accepted the code in the repo will
  <img width=854px height=661px src="/images/ash-success.png" alt="ASH success example"></a>
 </p>
 
-If one or more of the ASH security checks fail, the log (aggregated_results.txt) will be displayed in the console so you can see which ASH security checks are failing and perform the necessary remediation before attempting your commit again.
+### Successful Scans
+When no security issues are found:
+```
+✅ ASH security check passed!
+```
+
+All scan activity is automatically logged to `.git/logs/pre-commit.log` with timestamps for audit purposes.
 
 ### Bypassing the Hook
 
@@ -102,10 +164,31 @@ SKIP_ASH=1 git commit -m "Emergency fix"
 
 ## ⚙️ Configuration <a name = "configuration"></a>
 
+### ASH Configuration Script Options
+
+The `ash-config.sh` script supports several command-line options:
+
+```bash
+# Show all available options
+./ash-config.sh --help
+
+# Install with custom Git folder location
+./ash-config.sh --git-folder /custom/path/to/git/folder /path/to/your/repo
+
+# Enable verbose output during installation
+./ash-config.sh --verbose /path/to/your/repo
+```
+
+Available options:
+- `-g, --git-folder <path>`: Specify Git folder path (default: `${HOME}/Documents/Git`)
+- `-v, --verbose`: Enable verbose output during installation
+- `-h, --help`: Display help message
+
 ### Pre-commit Hook Configuration
 
-You can customize the behavior of the pre-commit hook by editing the configuration variables at the top of the pre-commit file:
+The pre-commit hook includes comprehensive configuration options at the top of the file:
 
+#### Basic Configuration
 ```bash
 # Configuration (can be customized)
 ASH_REPO_DIR="${HOME}/Documents/Git"
@@ -114,22 +197,140 @@ ASH_OUTPUT_DIR="${PWD}/.git/logs"
 RESULTS_FILE="${ASH_OUTPUT_DIR}/aggregated_results.txt"
 SKIP_ASH_ENV_VAR="SKIP_ASH"
 COLORIZE_OUTPUT=true
-
 ```
 
-Key options:
+#### Enhanced Output Options
+```bash
+# Enhanced output options
+VERBOSE_OUTPUT=true
+OUTPUT_FORMAT="json"  # "text" or "json"
+SHOW_DEBUG_INFO=false
+GROUP_BY_SEVERITY=true
+REAL_TIME_PROGRESS=true
+```
+
+### Configuration Options Explained
+
+#### Basic Settings
+- `ASH_REPO_DIR`: Directory where ASH repository is located
+- `ASH_REPO_NAME`: Name of the ASH repository folder
+- `ASH_OUTPUT_DIR`: Directory for ASH output and logs
+- `RESULTS_FILE`: Path to the aggregated results file
+- `SKIP_ASH_ENV_VAR`: Environment variable name used to bypass ASH checks
 - `COLORIZE_OUTPUT`: Enables/disables colored terminal output
-- `SKIP_ASH_ENV_VAR`: The environment variable name used to bypass ASH checks
 
+#### Enhanced Output Features
+- `VERBOSE_OUTPUT`: Enables detailed file-level findings display with line numbers
+- `OUTPUT_FORMAT`: Choose between "json" or "text" format for ASH output
+- `SHOW_DEBUG_INFO`: Enables ASH debug mode for troubleshooting
+- `GROUP_BY_SEVERITY`: Groups security findings by severity level (Critical, High, Medium, Low, Info)
+- `REAL_TIME_PROGRESS`: Shows real-time scan progress with file counts and issue detection
 
+### Advanced Features
 
-### Progress Indicator
+#### Comprehensive Logging
+The pre-commit hook automatically logs all activity to `.git/logs/pre-commit.log` with timestamps for audit purposes.
 
-The pre-commit hook now displays a spinner while ASH is running, providing visual feedback during the scan.
+#### Enhanced Results Display
+When `VERBOSE_OUTPUT=true`, the hook provides:
+- File-specific findings with line numbers
+- Severity-based color coding and grouping
+- Summary statistics (total files scanned, issues by severity)
+- Detailed parsing of both text and JSON output formats
 
-### Docker and ASH Checks
+#### Real-time Progress Monitoring
+With `REAL_TIME_PROGRESS=true`, the hook shows:
+- Live scan progress with file counts
+- Current scanning activity
+- Running count of security issues discovered
+- Visual progress indicators
 
-The pre-commit hook now checks if a Docker compatible runtime is running and if the ASH repo is cloned locally before attempting to run the scan, providing helpful error messages if either is missing.
+#### JSON Output Support
+When `OUTPUT_FORMAT="json"` is enabled:
+- Structured data parsing with `jq` (if available)
+- Enhanced finding categorization
+- Machine-readable output for integration
+
+#### Severity-based Issue Grouping
+Security findings are automatically categorized and color-coded:
+- 🚨 **Critical Issues** (Red)
+- 🔴 **High Severity** (Red)
+- 🟡 **Medium Severity** (Yellow)  
+- 🔵 **Low Severity** (Blue)
+- ℹ️ **Informational** (Green)
+
+### Robust Error Handling and Validation
+
+The system includes comprehensive checks for:
+- Docker runtime availability and functionality
+- ASH installation and version verification
+- Git repository validation
+- Directory permissions and access
+- Automatic backup of existing pre-commit hooks
+
+## 🚀 Enhanced Features <a name = "enhanced_features"></a>
+
+### Installation Script Enhancements
+
+The `ash-config.sh` script now includes:
+
+#### Interactive Validation
+- **Prerequisites Check**: Validates ASH repository presence at expected location
+- **Docker Runtime Verification**: Confirms Docker is running before installation
+- **Interactive Prompts**: Allows continuation with warnings for missing components
+- **Automatic Backup**: Creates timestamped backups of existing pre-commit hooks
+
+#### Improved User Experience
+- **Command-line Options**: Support for `--help`, `--verbose`, and `--git-folder` flags
+- **Comprehensive Error Messages**: Clear feedback for common installation issues
+- **Permission Validation**: Checks directory write permissions before attempting installation
+
+### Pre-commit Hook Advanced Features
+
+#### Multi-format Output Support
+The hook supports both text and JSON output formats:
+```bash
+OUTPUT_FORMAT="json"  # For structured, machine-readable output
+OUTPUT_FORMAT="text"  # For human-readable text output
+```
+
+#### Intelligent Results Parsing
+- **File-Level Detail**: Shows specific files and line numbers for security issues
+- **Severity Classification**: Automatically categorizes findings by security impact
+- **Smart Formatting**: Adapts display based on available parsing tools (jq for JSON)
+
+#### Progress Monitoring
+Two levels of progress indication:
+1. **Simple Spinner**: Basic visual feedback during scanning
+2. **Real-time Monitoring**: Live updates showing files processed and issues found
+
+#### Enhanced Logging System
+- **Timestamped Logs**: All activity logged with precise timestamps
+- **Audit Trail**: Complete record of hook execution in `.git/logs/pre-commit.log`
+- **Debug Support**: Optional debug mode for troubleshooting ASH issues
+
+#### Flexible Bypass Mechanism
+Multiple ways to handle emergency situations:
+```bash
+# Temporary bypass for single commit
+SKIP_ASH=1 git commit -m "Emergency fix"
+
+# Custom environment variable (configurable)
+export SKIP_ASH_ENV_VAR="MY_CUSTOM_BYPASS"
+```
+
+### Security and Reliability Enhancements
+
+#### Robust Validation Chain
+1. **Environment Validation**: Confirms all prerequisites before execution
+2. **Version Checking**: Verifies ASH installation and retrieves version info
+3. **Path Validation**: Ensures ASH executable is accessible
+4. **Output Directory Setup**: Creates necessary directories with proper permissions
+
+#### Error Recovery
+- **Graceful Degradation**: Falls back to simpler output formats when advanced tools unavailable
+- **Clear Exit Codes**: Proper status reporting for CI/CD integration
+- **Helpful Error Messages**: Specific remediation steps for common failures
 
 ## ✍️ Authors <a name = "authors"></a>
 
