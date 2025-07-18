@@ -73,7 +73,7 @@ This copies the pre-commit file into the .git/hooks directory in your repo which
 
 <p align="center">
   <a href="" rel="noopener">
- <img width=802px height=551px src="/images/pre-commit-hook.png" alt="pre-commit illustration"></a>
+ <img width="600" src="/images/pre-commit-hook.png" alt="pre-commit illustration"></a>
 </p>
 
 ## 🎈 Usage <a name="usage"></a>
@@ -138,7 +138,7 @@ When security issues are found, the hook displays:
 
 <p align="center">
   <a href="" rel="noopener">
- <img width=854px height=661px src="/images/ash-success.png" alt="ASH success example"></a>
+ <img width="600" src="/images/ash-success.png" alt="ASH success example"></a>
 </p>
 
 ### Successful Scans
